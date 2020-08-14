@@ -2,19 +2,31 @@ from ebooklib import epub
 
 import scrapy
 from scrapy import signals
-# from scrapy.xlib.pydispatch import dispatcher
 from pydispatch import dispatcher
 
 class LightNovelSpider(scrapy.Spider):
     name = 'LightNovelSpider'
-    start_urls = ['https://ln.hako.re/truyen/7307-no-game-no-life/c67073-chuong-1-l']
     base_urls = 'https://ln.hako.re'
 
-    def __init__(self):
-        self.__init_book()
+    def __init__(self,start_url,author,name):
+        """[Init Spider]
+
+        Args:
+            start_url ([string]): [URL of first chapter]
+        """
+        
+        self.start_url = start_url
+        self.author  = author if author else "Author"
+        self.name    = name if name else "Light Novel"
         self.chapter = []
 
+        self.__init_book()
         dispatcher.connect(self._create_book, signals.spider_closed)
+
+
+    def start_requests(self):
+        yield scrapy.Request(self.start_url,
+                                callback = self.parse)
 
     def parse(self, response):
         VOL_SELECTOR = '//*[@id="mainpart"]/div/div/div[1]/div[2]/h2'
@@ -33,30 +45,41 @@ class LightNovelSpider(scrapy.Spider):
         chapter = response.xpath(VOL_SELECTOR_TEXT).extract_first() + " " \
                     + response.xpath(CHAPTER_SELECTOR_TEXT).extract_first()
         
-        print(chapter)
         self.chapter.append(self._write_chapter(chapter,content))
         
         for link in response.xpath(NEXT_PAGE_SELECTOR).extract():
             link = self.base_urls + link
-            print(link)
             yield scrapy.Request(url=link, callback=self.parse)
-            # response.follow(next_page, self.parse)
-        
-        # self._create_book()
     
     def __init_book(self):
+        """
+        [Init epub writer]
+        """
         self.book = epub.EpubBook()
-        self.book.set_identifier('No Game No Life')
-        self.book.set_title('No Game No Life')
+        self.book.set_identifier(self.name)
+        self.book.set_title(self.name)
         self.book.set_language('vi')
 
         # set metadata
-        self.book.add_author('Author')
-
+        self.book.add_author(self.author)
         
+
     def _write_chapter(self,chapter,content):
+        """
+        Write Chapter 
+
+        Args:
+            chapter (string): [Name of chapter]
+            content (string): [Content of chapter]
+
+        Returns:
+            [epub.EpubHtml]: [Chapter of book]
+        """
+
         # create chapter
-        chap = epub.EpubHtml(title='Intro', file_name=chapter + '.xhtml', lang='vi')
+        chap = epub.EpubHtml(title=chapter, 
+                            file_name=chapter + '.xhtml', 
+                            lang='vi')
 
         chap.content= content
         
