@@ -111,4 +111,4 @@ class LightNovelSpider(scrapy.Spider):
         self.book.spine = ['nav'] + self.chapter
 
         # write to the file
-        epub.write_epub('lightnovel.epub', self.book, {})
+        epub.write_epub(self.name + '.epub', self.book, {})
