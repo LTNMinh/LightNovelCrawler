@@ -8,6 +8,11 @@ class LightNovelSpider(scrapy.Spider):
     name = 'LightNovelSpider'
     base_urls = 'https://ln.hako.re'
 
+    custom_settings = {
+        'DOWNLOAD_DELAY': 2,
+        'USER_AGENT' : 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36',
+    }
+
     def __init__(self,start_url,author,name):
         """[Init Spider]
 
@@ -45,6 +50,8 @@ class LightNovelSpider(scrapy.Spider):
         chapter = response.xpath(VOL_SELECTOR_TEXT).extract_first() + " " \
                     + response.xpath(CHAPTER_SELECTOR_TEXT).extract_first()
         
+        print(chapter)
+
         self.chapter.append(self._write_chapter(chapter,content))
         
         for link in response.xpath(NEXT_PAGE_SELECTOR).extract():
