@@ -50,6 +50,7 @@ class LightNovelSpider(scrapy.Spider):
         chapter = response.xpath(VOL_SELECTOR_TEXT).extract_first() + " " \
                     + response.xpath(CHAPTER_SELECTOR_TEXT).extract_first()
         
+        # Comment 
         print(chapter)
 
         self.chapter.append(self._write_chapter(chapter,content))
