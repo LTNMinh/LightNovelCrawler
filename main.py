@@ -4,6 +4,10 @@ import argparse
 from scrapy.crawler import CrawlerProcess
 from LightNovelSpider import LightNovelSpider
 
+
+import PySimpleGUI as sg
+
+
 parser = argparse.ArgumentParser(description='Light Novel Crawler from ln.hake.re')
 
 parser.add_argument("url",
@@ -34,4 +38,3 @@ if __name__ == "__main__":
                     author = args.author,
                     name = args.name)
     process.start()
-    
