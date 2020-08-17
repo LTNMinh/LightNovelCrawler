@@ -15,6 +15,8 @@ from GetLightNovelSpider import GetLightNovelSpider
 
 import re
 
+import glob
+
 # ----- Full layout -----
 layout = [
     [sg.Text("Link"),sg.In(size = (32,1),enable_events=True, key="-LINK-"),sg.Button("OK")],
@@ -24,18 +26,18 @@ layout = [
     [sg.Button("DOWNLOAD")],
 ]
 
-window = sg.Window("Light Novel Crawler", layout, element_justification = 'c')
+window = sg.Window("Light Novel Crawler", layout, element_justification = 'c',location=(600,200))
 
 while True:
     event, values = window.read()
 
     if event == "Exit" or event == sg.WIN_CLOSED:
-        try: 
-            remove('temp.png')
-            remove(basename(image_url))
-        except: 
-            pass 
+        for f in glob.glob(r"*.jpg"):
+            os.remove(f)
 
+        for f in glob.glob(r"*.png"):
+            os.remove(f)
+        
         break
 
     if event == "OK":
