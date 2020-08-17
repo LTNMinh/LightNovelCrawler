@@ -21,14 +21,12 @@ class GetLightNovelSpider(scrapy.Spider):
         """
         
         self.start_url = start_url
-        self.author  = author if author else "Author"
-        self.name    = name if name else "Light Novel"
+        self.author  = author[8:] if author else "Author"
+        self.name    = name[6:] if name else "Light Novel"
         self.temp_chapter = []
         self.all_chapter  = []
         self.toc     = {}
 
-        print("_____________________________________",self.name)
-        print("_____________________________________",self.author) 
         self.__init_book()
         dispatcher.connect(self._create_book, signals.spider_closed)
 
@@ -38,30 +36,17 @@ class GetLightNovelSpider(scrapy.Spider):
                                 callback = self.parse)
 
     def parse(self, response):
-        VOL_SELECTOR  = '.volume-mobile .sect-title::text'
         CHAPTER_LINK_SELECTOR = '.col-md-10 a::attr(href)'
-        # CHAPTER_NAME_SELECTOR = '.col-md-10 a::text'
-
-        vols     = response.css(VOL_SELECTOR).extract()
-        links    = response.css(CHAPTER_LINK_SELECTOR).extract()
-        # chapters =  response.css(CHAPTER_NAME_SELECTOR).extract()
-
-        for link in links:
-            link = self.base_urls + link
-            yield scrapy.Request(url=link, callback=self.parse_chapter)
-            
-            # print("Chapter:",self.temp_chapter)
-            # temp = (epub.Section(v),tuple(self.temp_chapter))
-            # self.toc.append(temp)
-            # print("TOC", self.toc)
-            # self.temp_chapter = []
+        link = response.css(CHAPTER_LINK_SELECTOR).extract_first()
+        link = self.base_urls + link
+        yield scrapy.Request(url=link, callback=self.parse_chapter)
 
     def parse_chapter(self,response):
         VOL_SELECTOR = '//*[@id="mainpart"]/div/div/div[1]/div[2]/h2'
         CHAPTER_SELECTOR = '//*[@id="mainpart"]/div/div/div[1]/div[2]/h4'
         CONTENT_SELECTOR = '//*[@id="chapter-content"]'
 
-
+        NEXT_PAGE_SELECTOR = '//*[@id="rd-side_icon"]/a[6]/@href'
         VOL_SELECTOR_TEXT = '//*[@id="mainpart"]/div/div/div[1]/div[2]/h2/text()'
         CHAPTER_SELECTOR_TEXT = '//*[@id="mainpart"]/div/div/div[1]/div[2]/h4/text()'
 
@@ -71,8 +56,6 @@ class GetLightNovelSpider(scrapy.Spider):
 
         vol     = response.xpath(VOL_SELECTOR_TEXT).extract_first()
         chapter = response.xpath(CHAPTER_SELECTOR_TEXT).extract_first()
-                    #response.xpath(VOL_SELECTOR_TEXT).extract_first() + " " \
-                    #+ response.xpath(CHAPTER_SELECTOR_TEXT).extract_first()
 
         c = self._write_chapter(chapter,content)
         if  self.toc.get(vol):
@@ -81,6 +64,10 @@ class GetLightNovelSpider(scrapy.Spider):
             self.toc[vol] = [c]
 
         self.all_chapter.append(c)
+
+        link = response.xpath(NEXT_PAGE_SELECTOR).extract_first()
+        link = self.base_urls + link
+        yield scrapy.Request(url=link, callback=self.parse_chapter)
         
     
     def __init_book(self):
@@ -92,8 +79,6 @@ class GetLightNovelSpider(scrapy.Spider):
         self.book.set_title(self.name)
         self.book.set_language('vi')
         self.book.set_cover("temp.png", open('temp.png', 'rb').read())
-
-        # set metadata
         self.book.add_author(self.author)
         
 
@@ -121,16 +106,16 @@ class GetLightNovelSpider(scrapy.Spider):
         return chap 
     
     def _create_book(self,spider):
-        print("_____________________________________",self.author) 
         #TABLE OF CONTENT 
-        self.toc = [ (epub.Section(i),tuple(z)) for i,z in zip(self.toc.keys(),
+        self.toc = [(epub.Section(i),tuple(z)) for i,z in zip(self.toc.keys(),
                                                             self.toc.values())]
-        print(self.toc)
         self.book.toc = (
                         tuple(self.toc)
                         )
-    
-        
+
+        # self.book.toc = (
+        #                 tuple(self.all_chapter)
+        #                 )
 
         # add default NCX and Nav file
         self.book.add_item(epub.EpubNcx())
@@ -148,8 +133,5 @@ class GetLightNovelSpider(scrapy.Spider):
 
         # basic spine
         self.book.spine = ['nav'] + self.all_chapter
-        print(self.all_chapter)
         # write to the file
-        epub.write_epub(self.name + '.epub', self.book, {})
-
-        print("_____________________________________",self.name + '.epub') 
+        epub.write_epub(str(self.name) + '.epub', self.book, {})

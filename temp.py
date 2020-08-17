@@ -25,11 +25,11 @@ layout = [
     [sg.Button("DOWNLOAD")],
 ]
 
-window = sg.Window("Image Viewer", layout, element_justification = 'c')
+window = sg.Window("Light Novel Crawler", layout, element_justification = 'c')
 
-# values['-LINK-'] = 'https://ln.hako.re/truyen/7367-kurono-senki-isekaiteni-sita-boku-ga-saikyou-nanoha-bed-no-uedake-no-youdesu'
 while True:
     event, values = window.read()
+
     if event == "Exit" or event == sg.WIN_CLOSED:
         try: 
             remove('temp.png')

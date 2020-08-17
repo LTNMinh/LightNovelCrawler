@@ -9,7 +9,7 @@ class LightNovelSpider(scrapy.Spider):
     base_urls = 'https://ln.hako.re'
 
     custom_settings = {
-        'DOWNLOAD_DELAY': 2,
+        'DOWNLOAD_DELAY': 0,
         'USER_AGENT' : 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36',
     }
 
