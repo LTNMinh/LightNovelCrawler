@@ -1,40 +1,71 @@
-import scrapy
-import argparse
+import os.path
+from os import remove
+from os.path  import basename
 
-from scrapy.crawler import CrawlerProcess
-from LightNovelSpider import LightNovelSpider
-
+from requests import get
+from bs4 import BeautifulSoup
+from PIL import ImageTk, Image
+from tkinter import Tk, Canvas
 
 import PySimpleGUI as sg
 
+import scrapy
+from scrapy.crawler import CrawlerProcess
+from GetLightNovelSpider import GetLightNovelSpider
 
-parser = argparse.ArgumentParser(description='Light Novel Crawler from ln.hake.re')
+import re
 
-parser.add_argument("url",
-                    action = 'store',
-                    help='Start url of lightnovel')
+# ----- Full layout -----
+layout = [
+    [sg.Text("Link"),sg.In(size = (32,1),enable_events=True, key="-LINK-"),sg.Button("OK")],
+    [sg.Text(size=(40, 1), key="-NAME-")],
+    [sg.Text(size=(40, 1), key="-AUTHOR-")],
+    [sg.Image(key="-IMAGE-")],
+    [sg.Button("DOWNLOAD")],
+]
 
-parser.add_argument('-a', 
-                    '--author',
-                    dest='author',
-                    action = 'store',
-                    default=False,
-                    help='Name of Author')
+window = sg.Window("Light Novel Crawler", layout, element_justification = 'c')
 
-parser.add_argument('-n', 
-                    '--name',
-                    dest='name',
-                    action = 'store',
-                    default=False,
-                    help='Name of LN')
+while True:
+    event, values = window.read()
 
+    if event == "Exit" or event == sg.WIN_CLOSED:
+        try: 
+            remove('temp.png')
+            remove(basename(image_url))
+        except: 
+            pass 
 
-if __name__ == "__main__":
-    args = parser.parse_args()
+        break
 
-    process = CrawlerProcess()
-    process.crawl(LightNovelSpider, 
-                    start_url = args.url, 
-                    author = args.author,
-                    name = args.name)
-    process.start()
+    if event == "OK":
+        url = values["-LINK-"]
+
+        response = get(url)
+        html_soup = BeautifulSoup(response.text, 'html.parser')
+        AUTHOR_SELECTOR  = 'div.series-information span.info-value a'
+        NAME_SELECTOR  = 'div.series-name-group span a'
+        IMAGE_SELECTOR  = 'div.left-column.col-12.col-md-3 div div.a6-ratio div'
+        r = r"url\('(.*)'\)"
+
+        name =  "Name :" + html_soup.select(NAME_SELECTOR)[0].text
+        author = "Author :" + html_soup.select(AUTHOR_SELECTOR)[0].text
+        image_url = re.findall(r,html_soup.select(IMAGE_SELECTOR)[0].attrs['style'])[0]
+
+        with open(basename(image_url), "wb") as f:
+            f.write(get(image_url).content)
+
+        window["-NAME-"].update(name)
+        window["-AUTHOR-"].update(author)
+        im = Image.open(basename(image_url))
+        im.save('temp.png')
+        window["-IMAGE-"].update(filename='temp.png')
+
+    elif event == "DOWNLOAD":  
+        process = CrawlerProcess()
+        process.crawl(GetLightNovelSpider, 
+                    start_url = url,
+                    author = author,
+                    name = name)
+        process.start()
+        process.stop()
