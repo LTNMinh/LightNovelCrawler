@@ -1,3 +1,6 @@
 *.epub
 *.png
 *.jpg
+build
+dist
+setup.py
