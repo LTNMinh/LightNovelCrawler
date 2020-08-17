@@ -3,6 +3,7 @@ from ebooklib import epub
 import scrapy
 from scrapy import signals
 
+import os 
 from os.path  import basename
 from requests import get
 from bs4 import BeautifulSoup
@@ -75,8 +76,8 @@ class GetLightNovelSpider(scrapy.Spider):
             image_name.append(basename(image_url))
         
         # Parse Image
-        regex = re.compile(r'src="([\w:/.-]*\/)[\w.-]*"')
-        regex.sub('',content)
+        regex = re.compile(r'src="[\w:/.-]*\/([\w.-]*)"')
+        content = regex.sub('src="\g<1>"',content)
 
         c = self._write_chapter(chapter,content,image_name)
         if  self.toc.get(vol):
