@@ -105,9 +105,6 @@ class GetLightNovelSpider(scrapy.Spider):
 
         # defube style
         style = '''
-        BODY { color: white;
-                text-align: justify;}
-        
         p {
             margin-top: 0.0em;
             margin-bottom: 0.3em;
