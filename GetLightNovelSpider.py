@@ -102,7 +102,24 @@ class GetLightNovelSpider(scrapy.Spider):
         self.book.set_language('vi')
         self.book.set_cover("temp.png", open('temp.png', 'rb').read())
         self.book.add_author(self.author)
+
+        # defube style
+        style = '''
+        BODY { color: white;
+                text-align: justify;}
         
+        p {
+            margin-top: 0.0em;
+            margin-bottom: 0.3em;
+            text-indent: 1.3em;
+        }
+        '''
+
+        self.book_default_css = epub.EpubItem(uid="style_default", 
+                                    file_name="style/default.css", 
+                                    media_type="text/css", content=style)
+        
+        self.book.add_item(self.book_default_css)
 
     def _write_chapter(self,chapter,content,image_name):
         """
@@ -122,7 +139,7 @@ class GetLightNovelSpider(scrapy.Spider):
                             lang='vi')
 
         chap.content= content
-        
+        chap.add_item(self.book_default_css)
         # add chapter
         self.book.add_item(chap)
         # add image 
@@ -130,6 +147,7 @@ class GetLightNovelSpider(scrapy.Spider):
             image_item = epub.EpubItem(file_name = iname, 
                         content=open(iname, 'rb').read(),)
             self.book.add_item(image_item)
+        
         
         return chap 
     
