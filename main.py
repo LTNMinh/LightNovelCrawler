@@ -12,6 +12,7 @@ import PySimpleGUI as sg
 import scrapy
 from scrapy.crawler import CrawlerProcess
 from GetLightNovelSpider import GetLightNovelSpider
+from UpdateLigthNovel import UpdateLightNovel
 
 import re
 
@@ -23,7 +24,7 @@ layout = [
     [sg.Text(size=(40, 1), key="-NAME-")],
     [sg.Text(size=(40, 1), key="-AUTHOR-")],
     [sg.Image(key="-IMAGE-")],
-    [sg.Button("DOWNLOAD")],
+    [sg.Button("DOWNLOAD"),sg.Button("UPDATE")],
 ]
 
 window = sg.Window("Light Novel Crawler", layout, element_justification = 'c',location=(600,200))
@@ -32,11 +33,6 @@ while True:
     event, values = window.read()
 
     if event == "Exit" or event == sg.WIN_CLOSED:
-        for f in glob.glob(r"*.jpg"):
-            os.remove(f)
-
-        for f in glob.glob(r"*.png"):
-            os.remove(f)
         
         break
 
@@ -71,3 +67,7 @@ while True:
                     name = name)
         process.start()
         process.stop()
+    
+    elif event == "UPDATE":  
+        spider = UpdateLightNovel(url,name,html_soup)
+        spider.update()
