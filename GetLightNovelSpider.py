@@ -12,6 +12,8 @@ from pydispatch import dispatcher
 import re
 import glob
 
+from ultis import print_progress
+
 
 class GetLightNovelSpider(scrapy.Spider):
     name = 'GetLightNovelSpider'
@@ -22,7 +24,7 @@ class GetLightNovelSpider(scrapy.Spider):
         'USER_AGENT' : 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36',
     }
 
-    def __init__(self,start_url,author,name):
+    def __init__(self,start_url,author,name,html_soup):
         """[Init Spider]
 
         Args:
@@ -38,6 +40,10 @@ class GetLightNovelSpider(scrapy.Spider):
 
         self.__init_book()
         dispatcher.connect(self._create_book, signals.spider_closed)
+        
+        CHAPTER_SELECTOR = '.chapter-name a'
+        self.total_items = len(list(html_soup.select(CHAPTER_SELECTOR)))
+        self.index = 0 
 
 
     def start_requests(self):
@@ -71,9 +77,10 @@ class GetLightNovelSpider(scrapy.Spider):
         image_name = []
         for image_url in html_soup.select('img'):
             image_url = image_url.attrs['src']
-            with open(basename(image_url), "wb") as f:
-                f.write(get(image_url).content)
-            image_name.append(basename(image_url))
+            if image_url[-4:] == '.jpg' or image_url[-4:] == '.png':
+                with open(basename(image_url), "wb") as f:
+                    f.write(get(image_url).content)
+                image_name.append(basename(image_url))
         
         # Parse Image
         regex = re.compile(r'src="[\w:/.-]*\/([\w.-]*)"')
@@ -86,6 +93,9 @@ class GetLightNovelSpider(scrapy.Spider):
             self.toc[vol] = [c]
 
         self.all_chapter.append(c)
+        
+        self.index += 1 
+        print_progress(self.index,self.total_items)
 
         link = response.xpath(NEXT_PAGE_SELECTOR).extract_first()
         if link:
@@ -117,6 +127,9 @@ class GetLightNovelSpider(scrapy.Spider):
                                     media_type="text/css", content=style)
         
         self.book.add_item(self.book_default_css)
+        self.book.add_metadata(None, 'meta', '', {'name': 'website', 
+                                    'content': self.start_url,
+                                    })
 
     def _write_chapter(self,chapter,content,image_name):
         """

@@ -15,7 +15,6 @@ from GetLightNovelSpider import GetLightNovelSpider
 from UpdateLigthNovel import UpdateLightNovel
 
 import re
-
 import glob
 
 # ----- Full layout -----
@@ -33,7 +32,6 @@ while True:
     event, values = window.read()
 
     if event == "Exit" or event == sg.WIN_CLOSED:
-        
         break
 
     if event == "OK":
@@ -41,8 +39,8 @@ while True:
 
         response = get(url)
         html_soup = BeautifulSoup(response.text, 'html.parser')
-        AUTHOR_SELECTOR  = 'div.series-information span.info-value a'
-        NAME_SELECTOR  = 'div.series-name-group span a'
+        AUTHOR_SELECTOR = 'div.series-information span.info-value a'
+        NAME_SELECTOR   = 'div.series-name-group span a'
         IMAGE_SELECTOR  = 'div.left-column.col-12.col-md-3 div div.a6-ratio div'
         r = r"url\('(.*)'\)"
 
@@ -64,10 +62,11 @@ while True:
         process.crawl(GetLightNovelSpider, 
                     start_url = url,
                     author = author,
-                    name = name)
+                    name = name,
+                    html_soup = html_soup)
         process.start()
         process.stop()
     
     elif event == "UPDATE":  
-        spider = UpdateLightNovel(url,name,html_soup)
+        spider = UpdateLightNovel(name[6:] + '.epub')
         spider.update()

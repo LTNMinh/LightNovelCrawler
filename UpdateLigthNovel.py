@@ -14,27 +14,43 @@ from bs4 import BeautifulSoup
 import time 
 import glob
 
+from ultis import print_progress
+
 class UpdateLightNovel():
     base_urls = 'https://ln.hako.re'
     time_sleep = 2
 
-    def __init__(self,url,name,html_soup):
-        self.url = url
-        self.name = name[6:]
-        self.html_soup = html_soup
+    def __init__(self,file,url = None):
+
+        # self.name = name[6:]
+        self.file = file 
         
-        self.book = epub.read_epub(str(self.name) + '.epub')
-        # self.book = epub.read_epub('test.epub')
+        self.book = epub.read_epub(self.file)        
+        if url: 
+            self.url = url  
+            self.book.add_metadata(None, 'meta', '', {'name': 'website', 
+                                    'content': self.url,
+                                    })
+        else:
+            self.url = self.book.get_metadata('OPF', 'website')[0][1]['content'] 
+
+        response = get(self.url)
+        self.html_soup = BeautifulSoup(response.text, 'html.parser')
+
         self.toc = self._get_toc()
         self.book_default_css = list(self.book.get_items_of_type(ebooklib.ITEM_STYLE))[0]
-        self.all_chapter =  list(self.book.get_items_of_type(ebooklib.ITEM_DOCUMENT))[1:-1]
+        self.all_chapter      = list(self.book.get_items_of_type(ebooklib.ITEM_DOCUMENT))[1:-1]
         
     def update(self):
         VOL_SELECTOR = 'h2.title-item'
         CHAP_SELECTOR = 'h4.title-item'
         CONTENT_SELECTOR = '#chapter-content'
 
-        for loc,link in self._not_in_chapter():
+        not_in_chapter = list(self._not_in_chapter())
+        total = len(not_in_chapter)
+        index = 0 
+
+        for loc,link in not_in_chapter:
             url = self.base_urls + link 
             response = get(url)
             print("Crawl at url ({}):{} ".format(response.status_code,url))
@@ -68,9 +84,11 @@ class UpdateLightNovel():
                 self.toc[vol] = [c]
 
             self.all_chapter.insert(loc,c)
+            print_progress(index,total)
+            index += 1 
             time.sleep(self.time_sleep)
+
         self._create_book()
-        
         print("Update Done")
 
     def _get_toc(self):
@@ -140,7 +158,7 @@ class UpdateLightNovel():
         self.book.spine = ['nav'] + self.all_chapter
         
         # write to the file
-        epub.write_epub(str(self.name) + '.epub', self.book, {})
+        epub.write_epub(self.file, self.book, {})
 
         for f in glob.glob(r"*.jpg"):
             os.remove(f)
