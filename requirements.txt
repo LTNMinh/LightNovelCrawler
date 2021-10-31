@@ -3,5 +3,5 @@ ebooklib
 requests
 bs4
 Pillow
-googey
+Googey
 

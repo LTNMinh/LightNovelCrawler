@@ -1,6 +1,13 @@
 *.epub
 *.png
 *.jpg
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+.vscode/
+
 build
 dist
 setup.py
