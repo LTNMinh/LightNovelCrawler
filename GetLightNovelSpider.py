@@ -3,8 +3,8 @@ from ebooklib import epub
 import scrapy
 from scrapy import signals
 
-import os 
-from os.path  import basename
+import os
+from os.path import basename
 from requests import get
 from bs4 import BeautifulSoup
 from pydispatch import dispatcher
@@ -21,34 +21,33 @@ class GetLightNovelSpider(scrapy.Spider):
 
     custom_settings = {
         'DOWNLOAD_DELAY': 2,
-        'USER_AGENT' : 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36',
+        'USER_AGENT': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36',
     }
 
-    def __init__(self,start_url,author,name,html_soup):
+    def __init__(self, start_url, author, name, html_soup):
         """[Init Spider]
 
         Args:
             start_url ([string]): [URL of first chapter]
         """
-        
+
         self.start_url = start_url
-        self.author  = author[8:] if author else "Author"
-        self.name    = name[6:] if name else "Light Novel"
+        self.author = author[8:] if author else "Author"
+        self.name = name[6:] if name else "Light Novel"
         self.temp_chapter = []
-        self.all_chapter  = []
-        self.toc     = {}
+        self.all_chapter = []
+        self.toc = {}
 
         self.__init_book()
         dispatcher.connect(self._create_book, signals.spider_closed)
-        
+
         CHAPTER_SELECTOR = '.chapter-name a'
         self.total_items = len(list(html_soup.select(CHAPTER_SELECTOR)))
-        self.index = 0 
-
+        self.index = 0
 
     def start_requests(self):
         yield scrapy.Request(self.start_url,
-                                callback = self.parse)
+                                callback=self.parse)
 
     def parse(self, response):
         CHAPTER_LINK_SELECTOR = '.col-md-10 a::attr(href)'
@@ -56,7 +55,7 @@ class GetLightNovelSpider(scrapy.Spider):
         link = self.base_urls + link
         yield scrapy.Request(url=link, callback=self.parse_chapter)
 
-    def parse_chapter(self,response):
+    def parse_chapter(self, response):
         VOL_SELECTOR = '//*[@id="mainpart"]/div/div/div[1]/div[2]/h2'
         CHAPTER_SELECTOR = '//*[@id="mainpart"]/div/div/div[1]/div[2]/h4'
         CONTENT_SELECTOR = '//*[@id="chapter-content"]'
@@ -69,11 +68,11 @@ class GetLightNovelSpider(scrapy.Spider):
         content += response.xpath(CHAPTER_SELECTOR).extract_first()
         content += response.xpath(CONTENT_SELECTOR).extract_first()
 
-        vol     = response.xpath(VOL_SELECTOR_TEXT).extract_first()
+        vol = response.xpath(VOL_SELECTOR_TEXT).extract_first()
         chapter = response.xpath(CHAPTER_SELECTOR_TEXT).extract_first()
 
-        # Download Image 
-        html_soup =  BeautifulSoup(content, 'html.parser')
+        # Download Image
+        html_soup = BeautifulSoup(content, 'html.parser')
         image_name = []
         for image_url in html_soup.select('img'):
             image_url = image_url.attrs['src']
@@ -81,27 +80,27 @@ class GetLightNovelSpider(scrapy.Spider):
                 with open(basename(image_url), "wb") as f:
                     f.write(get(image_url).content)
                 image_name.append(basename(image_url))
-        
+
         # Parse Image
         regex = re.compile(r'src="[\w:/.-]*\/([\w.-]*)"')
-        content = regex.sub('src="\g<1>"',content)
+        content = regex.sub('src="\g<1>"', content)
 
-        c = self._write_chapter(chapter,content,image_name)
-        if  self.toc.get(vol):
-            self.toc[vol].append(c)  
-        else: 
+        c = self._write_chapter(chapter, content, image_name)
+        if self.toc.get(vol):
+            self.toc[vol].append(c)
+        else:
             self.toc[vol] = [c]
 
         self.all_chapter.append(c)
-        
-        self.index += 1 
-        print_progress(self.index,self.total_items)
+
+        self.index += 1
+        print_progress(self.index, self.total_items)
 
         link = response.xpath(NEXT_PAGE_SELECTOR).extract_first()
         if link:
             link = self.base_urls + link
             yield scrapy.Request(url=link, callback=self.parse_chapter)
-        
+
     def __init_book(self):
         """
         [Init epub writer]
@@ -122,16 +121,16 @@ class GetLightNovelSpider(scrapy.Spider):
         }
         '''
 
-        self.book_default_css = epub.EpubItem(uid="style_default", 
-                                    file_name="style/default.css", 
-                                    media_type="text/css", content=style)
-        
-        self.book.add_item(self.book_default_css)
-        self.book.add_metadata(None, 'meta', '', {'name': 'website', 
-                                    'content': self.start_url,
-                                    })
+        self.book_default_css = epub.EpubItem(uid="style_default",
+                                            file_name="style/default.css",
+                                            media_type="text/css", content=style)
 
-    def _write_chapter(self,chapter,content,image_name):
+        self.book.add_item(self.book_default_css)
+        self.book.add_metadata(None, 'meta', '', {'name': 'website',
+                                                'content': self.start_url,
+                                                })
+
+    def _write_chapter(self, chapter, content, image_name):
         """
         Write Chapter 
 
@@ -144,30 +143,29 @@ class GetLightNovelSpider(scrapy.Spider):
         """
 
         # create chapter
-        chap = epub.EpubHtml(title=chapter, 
-                            file_name=chapter + '.xhtml', 
+        chap = epub.EpubHtml(title=chapter,
+                            file_name=chapter + '.xhtml',
                             lang='vi')
 
-        chap.content= content
+        chap.content = content
         chap.add_item(self.book_default_css)
         # add chapter
         self.book.add_item(chap)
-        # add image 
+        # add image
         for iname in image_name:
-            image_item = epub.EpubItem(file_name = iname, 
-                        content=open(iname, 'rb').read(),)
+            image_item = epub.EpubItem(file_name=iname,
+                                    content=open(iname, 'rb').read(),)
             self.book.add_item(image_item)
-        
-        
-        return chap 
-    
-    def _create_book(self,spider):
-        #TABLE OF CONTENT 
-        self.toc = [(epub.Section(i),tuple(z)) for i,z in zip(self.toc.keys(),
-                                                            self.toc.values())]
+
+        return chap
+
+    def _create_book(self, spider):
+        # TABLE OF CONTENT
+        self.toc = [(epub.Section(i), tuple(z)) for i, z in zip(self.toc.keys(),
+                                                                self.toc.values())]
         self.book.toc = (
-                        tuple(self.toc)
-                        )
+            tuple(self.toc)
+        )
 
         # self.book.toc = (
         #                 tuple(self.all_chapter)
@@ -179,9 +177,9 @@ class GetLightNovelSpider(scrapy.Spider):
 
         # define CSS style
         style = 'BODY {color: white;}'
-        nav_css = epub.EpubItem(uid="style_nav", 
-                                file_name="style/nav.css", 
-                                media_type="text/css", 
+        nav_css = epub.EpubItem(uid="style_nav",
+                                file_name="style/nav.css",
+                                media_type="text/css",
                                 content=style)
 
         # add CSS file
